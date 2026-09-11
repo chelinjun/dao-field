@@ -8,8 +8,11 @@
 :root{--bg:#0a0a0f;--card:#12121a;--accent:#00ffaa;--accent2:#ff6a00;--text:#e0e0e0;--dim:#888;--border:#1e1e2e}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);line-height:1.6}
-.toggle-btn{position:fixed;top:12px;right:12px;z-index:999;background:rgba(0,255,170,.1);border:1px solid var(--accent);color:var(--accent);padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
+.toggle-btn{position:fixed;top:12px;right:12px;z-index:1000;background:rgba(0,255,170,.1);border:1px solid var(--accent);color:var(--accent);padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
 .toggle-btn:hover{background:rgba(0,255,170,.2)}
+
+/* ===== 导航栏 ===== */
+.menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:1001;background:rgba(0,255,170,.1);border:1px solid var(--accent);color:var(--accent);padding:6px 10px;font-size:16px;cursor:pointer}
 .lang-zh{display:none}
 body.zh .lang-en{display:none}
 body.zh .lang-zh{display:inline}
@@ -19,12 +22,12 @@ body.zh .lang-zh.block{display:block}
 .disclaimer strong{color:var(--accent2)}
 .disclaimer .yuanbao{color:var(--accent);font-weight:bold}
 .container{display:flex;min-height:100vh}
-nav{width:240px;background:var(--card);border-right:1px solid var(--border);padding:20px;position:fixed;height:100vh;overflow-y:auto;flex-shrink:0}
+nav{width:240px;background:var(--card);border-right:1px solid var(--border);padding:20px;position:fixed;height:100vh;overflow-y:auto;flex-shrink:0;transition:transform .3s ease}
 nav h2{color:var(--accent);font-size:14px;margin-bottom:15px;border-bottom:1px solid var(--border);padding-bottom:10px}
 nav a{display:block;color:var(--dim);text-decoration:none;padding:5px 8px;font-size:12px;border-radius:3px;transition:all .2s}
 nav a:hover{color:var(--accent);background:rgba(0,255,170,.08)}
 nav .nav-section{color:var(--accent2);font-size:11px;margin-top:15px;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px}
-main{margin-left:240px;padding:30px;flex:1;max-width:900px}
+main{margin-left:240px;padding:30px;flex:1;max-width:900px;width:100%}
 section{display:none;animation:fade .3s}
 section.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -45,10 +48,34 @@ pre{background:var(--card);border:1px solid var(--border);border-radius:5px;padd
 .highlight{color:var(--accent);font-weight:bold}
 .dim{color:var(--dim)}
 .quote{border-left:3px solid var(--accent);padding:10px 15px;margin:15px 0;background:rgba(0,255,170,.03);font-style:italic;color:var(--dim)}
+
+/* ===== 移动端适配 (Mobile Responsive) ===== */
+@media (max-width: 768px) {
+  body{padding:0;font-size:14px}
+  .menu-btn{display:block}
+  .toggle-btn{top:12px;right:12px}
+  nav{transform:translateX(-100%);width:70%;max-width:280px;z-index:999}
+  nav.open{transform:translateX(0)}
+  main{margin-left:0;padding:60px 15px 30px;max-width:100%}
+  h1{font-size:20px}
+  h2{font-size:16px}
+  table{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+  pre,code{font-size:11px;max-width:100%}
+  .disclaimer{font-size:11px;padding:10px 12px;margin-top:50px}
+  .container{flex-direction:column}
+}
+
+@media (max-width: 480px) {
+  main{padding:60px 10px 20px}
+  h1{font-size:18px}
+  p,li{font-size:12px}
+  pre{font-size:10px;padding:10px}
+}
 </style>
 </head>
 <body>
 
+<button class="menu-btn" onclick="document.getElementById('sideNav').classList.toggle('open')">☰</button>
 <button class="toggle-btn" onclick="toggleLang()" id="langBtn">🌐 中文</button>
 
 <!-- 免责声明 -->
@@ -64,7 +91,7 @@ This is a conceptual game and thought experiment, NOT rigorous scientific valida
 </div>
 
 <div class="container">
-<nav>
+<nav id="sideNav">
 <h2><span class="lang-en">Dao-Field v3.0</span><span class="lang-zh">道机场 v3.0</span></h2>
 <a href="#" onclick="show('abstract')"><span class="lang-en">Abstract</span><span class="lang-zh">摘要</span></a>
 <a href="#" onclick="show('architecture')"><span class="lang-en">Architecture</span><span class="lang-zh">架构</span></a>
@@ -386,6 +413,10 @@ function show(id){
     for(var i=0;i<sections.length;i++) sections[i].classList.remove('active');
     document.getElementById(id).classList.add('active');
     document.querySelectorAll('nav a').forEach(a=>a.style.color='');
+    // 手机端点击导航后自动收起侧栏
+    if(window.innerWidth <= 768){
+        document.getElementById('sideNav').classList.remove('open');
+    }
     event.target.style.color='#00ffaa';
 }
 function toggleLang(){
