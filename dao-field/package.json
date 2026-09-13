@@ -1,0 +1,9 @@
+{
+  "name": "dao-field",
+  "version": "1.0.0",
+  "description": "The Ledger & The Spiral — 五节点耦合动力学 / 双层守恒结构",
+  "main": "index.html",
+  "scripts": {
+    "check": "node check.js"
+  }
+}

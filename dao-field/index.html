@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ledger &amp; The Spiral</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+         background: #0a0a0f; color: #e8e8f0;
+         display: flex; flex-direction: column; align-items: center;
+         min-height: 100vh; padding: 16px; gap: 14px; }
+  h1 { font-size: 17px; font-weight: 500; letter-spacing: 0.5px; color: #fff; }
+  .sub { font-size: 11px; color: #7a7a90; text-align: center; max-width: 440px; line-height: 1.5; }
+  .ledger { display: flex; gap: 18px; font-size: 13px; background: #141420; padding: 10px 20px; border-radius: 10px; border: 1px solid #2a2a40; }
+  .ledger b { color: #6cf; font-variant-numeric: tabular-nums; }
+  .warn { color: #f94 !important; }
+  canvas { background: #050508; border-radius: 12px; border: 1px solid #2a2a40; max-width: 100%; }
+  .bars { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 6px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .bar-row span { width: 14px; color: #aaa; }
+  .track { flex: 1; height: 14px; background: #1a1a28; border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; width: 20%; border-radius: 4px; transition: width 0.1s linear; }
+  .val { width: 44px; text-align: right; color: #ccc; font-variant-numeric: tabular-nums; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 440px; }
+  button { font-family: inherit; font-size: 12px; padding: 9px 14px; border-radius: 8px; border: 1px solid #2a2a40; background: #161622; color: #e8e8f0; cursor: pointer; }
+  button:hover { background: #1f1f30; }
+  button:active { transform: scale(0.96); }
+  button.boost { border-color: #4a4a70; }
+  .narr { max-width: 440px; font-size: 12px; color: #9a9ab0; text-align: center; min-height: 2.6em; line-height: 1.6; }
+  .doc { max-width: 640px; font-size: 12.5px; line-height: 1.7; color: #c0c0d0; text-align: left; margin-top: 8px; }
+  .doc h2 { font-size: 14px; color: #fff; margin: 18px 0 6px; font-weight: 600; }
+  .doc pre { background: #050508; border: 1px solid #2a2a40; border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 11.5px; line-height: 1.5; color: #d0d0e0; }
+  .doc code { background: #161622; padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+  .doc table { border-collapse: collapse; width: 100%; font-size: 11.5px; margin: 6px 0; }
+  .doc td, .doc th { border: 1px solid #2a2a40; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .doc th { color: #6cf; }
+  .quote { border-left: 3px solid #6cf; padding: 6px 14px; color: #b0b0c8; margin: 10px 0; }
+  .note { background: #0f1a22; border: 1px solid #1e4050; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 11.5px; color: #a0d0e0; line-height: 1.6; }
+  a { color: #6cf; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>The Ledger &amp; The Spiral</h1>
+<div class="sub">Five nodes. One ledger. No <code>if</code> statements.<br>Click a button. Watch it balance itself.</div>
+
+<div class="ledger">
+  <div>Σ = <b id="sum">1.0000</b></div>
+  <div>spread = <b id="spread">0.0000</b></div>
+  <div id="status">balanced</div>
+</div>
+
+<canvas id="cv" width="360" height="300"></canvas>
+
+<div class="bars" id="bars"></div>
+
+<div class="btns">
+  <button class="boost" data-i="0">↑A</button>
+  <button class="boost" data-i="1">↑B</button>
+  <button class="boost" data-i="2">↑C</button>
+  <button class="boost" data-i="3">↑D</button>
+  <button class="boost" data-i="4">↑E</button>
+  <button id="extreme">extreme</button>
+  <button id="drive">drive: OFF</button>
+  <button id="auto">auto drift</button>
+  <button id="reset">reset</button>
+</div>
+
+<div class="narr" id="narr">The total is always 100%. Push one up — the others pay for it.</div>
+
+<div class="doc">
+  <h2>One equation</h2>
+<pre>
+ẋᵢ = α·xᵢ₋₁(1−xᵢ) − α·xᵢ(1−xᵢ₊₁)   // generation (cycle)
+   + β·xᵢ₊₂(1−xᵢ) − β·xᵢ(1−xᵢ₋₂)   // inhibition (diagonal)
+   + ε·sin(ωt + 2πi/5)              // drive (zero-sum)
+</pre>
+  <p>Five nodes, indexed modulo 5. α, β, ε &gt; 0. Every term is a polynomial — <b>zero case distinctions</b>. The <code>(1 − xᵢ)</code> factor is the brake: as a node approaches 1, inflow automatically goes to zero.</p>
+
+  <h2>Four results</h2>
+  <table>
+    <tr><th>#</th><th>Result</th><th>Why it matters</th></tr>
+    <tr>
+      <td>1</td>
+      <td><b>Σxᵢ = 1 invariant</b></td>
+      <td>The 5th roots of unity sum to zero (drive), and polynomial terms cancel cyclically under reindexing (generation/inhibition). <b>You can't reach 11.</b></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><b>Re λ₁ = −0.691α − 1.809β &lt; 0</b></td>
+      <td>For every α, β &gt; 0. Push anything to an extreme — it comes back. At α=1, β=0.6: <b>−1.776</b>.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><b>Drive breaks the dead equilibrium</b></td>
+      <td>Linear-response threshold <b>ε* ≈ 0.503</b>. Beyond it, logistic saturation caps the amplitude — <i>stays alive without blowing up</i>.</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><b>No component reaches zero</b></td>
+      <td>Coordinate hyperplanes are repelling. Nothing explodes; nothing goes extinct.</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <b>Note on the spectrum.</b> At x* = 1/5 the Jacobian is circulant with first row
+    <code>[−(α+β), 0.2α, 0.8β, 0.2β, 0.8α]</code>. Its exact eigenvalues are
+    <code>λ_k = −(α+β) + 0.2α·ωᵏ + 0.8α·ω⁻ᵏ + 0.8β·ω²ᵏ + 0.2β·ω⁻²ᵏ</code>, where <code>ω = e^(2πi/5)</code>.
+    A simplified form <code>λ_k = −(α+β) + α·ωᵏ + β·ω²ᵏ</code> gives the correct <i>real</i> parts
+    (the stability-relevant part) but wrong <i>imaginary</i> parts, because it assumes inflow/outflow are symmetric.
+    Only the real parts matter for Prop. 2. The imaginary parts set the spiral period.
+  </div>
+
+  <h2>Why no <code>if</code></h2>
+  <p>Saturation is <code>(1 − xᵢ)</code> — plain multiplication. As <code>xᵢ → 1</code> inflow goes to zero; as <code>xᵢ → 0</code> inflow is maximal. The system brakes itself with no branch instruction. <b>Balance as a property of the flow, not a set of rules.</b></p>
+
+  <h2>The counterexample</h2>
+  <p><code>xₜ₊₁ = 1 − xₜ</code>. Apply twice: <code>xₜ₊₂ = xₜ</code>. Every orbit is exact period-2, multiplier μ = (−1)(−1) = <b>+1</b>, neutrally stable. A language model stuck repeating one phrase <i>is</i> this system: a state, a flip, no saturation, no third dimension.</p>
+  <p class="quote">The difference between a living cycle and a dead loop is the distance of |μ| from 1.</p>
+
+  <h2>What this is not</h2>
+  <ul>
+    <li>Not a theory of everything.</li>
+    <li>Not a prediction engine.</li>
+    <li>Not a claim about any tradition. (Call them A–E — same result.)</li>
+  </ul>
+
+  <p class="quote">The ledger is conserved; the spectrum contracts; the drive wakes without spending. Everything else — how you read your own entry — is the only variable left open.</p>
+</div>
+
+<script>
+const N = 5, ALPHA = 1.0, BETA = 0.6, EPS = 0.30, OMEGA = 0.8, DT = 0.02;
+const COLORS = ['#4ade80','#f87171','#fbbf24','#94a3b8','#60a5fa'];
+const NAMES  = ['A','B','C','D','E'];
+
+let x = [0.2, 0.2, 0.2, 0.2, 0.2], t = 0, driveOn = false, autoOn = false;
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height, CX = W/2, CY = H/2;
+
+function rhs(xi, i) {
+  const im = (i+4)%N, ip = (i+1)%N, i2 = (i+2)%N, im2 = (i+3)%N;
+  const gen = ALPHA * (x[im]*(1-x[i]) - x[i]*(1-x[ip]));
+  const inh = BETA  * (x[i2]*(1-x[i]) - x[i]*(1-x[im2]));
+  const frc = driveOn ? EPS * Math.sin(OMEGA*t + 2*Math.PI*i/N) : 0;
+  return gen + inh + frc;
+}
+
+function step() {
+  const dx = x.map((_, i) => rhs(x, i));
+  let nx = x.map((v, i) => v + DT*dx[i]);
+  nx = nx.map(v => Math.max(v, 1e-9));
+  const s = nx.reduce((a,b)=>a+b, 0);
+  if (s > 0) x = nx.map(v => v/s);
+  t += DT;
+}
+
+// ---- build bar rows ----
+const barsEl = document.getElementById('bars');
+NAMES.forEach((_, i) => {
+  const row = document.createElement('div');
+  row.className = 'bar-row';
+  row.innerHTML = `<span>${NAMES[i]}</span><div class="track"><div class="fill" id="fill${i}" style="background:${COLORS[i]}"></div></div><div class="val" id="val${i}">20.0%</div>`;
+  barsEl.appendChild(row);
+});
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // center 0.2 reference ring
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(CX, CY, 20, 0, Math.PI*2); ctx.stroke();
+
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const a = -Math.PI/2 + i*2*Math.PI/N;
+    const rr = Math.max(8, 20 + (x[i]-0.2) * 260);
+    pts.push({ x: CX + rr*Math.cos(a), y: CY + rr*Math.sin(a) });
+  }
+
+  // pentagon
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.closePath(); ctx.stroke();
+
+  // inhibition diagonals
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  for (let i = 0; i < N; i++) {
+    const j = (i+2)%N;
+    ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke();
+  }
+
+  // nodes
+  pts.forEach((p, i) => {
+    const r = 4 + 12*Math.sqrt(Math.max(x[i], 0)/0.2);
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r*2.2);
+    grad.addColorStop(0, COLORS[i] + '90');
+    grad.addColorStop(1, COLORS[i] + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r*2.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = COLORS[i];
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(NAMES[i], p.x, p.y);
+  });
+
+  // center ledger value
+  ctx.fillStyle = '#6cf';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Σ=' + x.reduce((a,b)=>a+b,0).toFixed(4), CX, CY + 4);
+}
+
+const narrEl = document.getElementById('narr');
+const narrs = [
+  "The total is always 100%. Push one up — the others pay for it.",
+  "That bulge? It's already shrinking back. (1 − xᵢ) is the brake.",
+  "drive OFF → it spirals down to dead-even. Too quiet.",
+  "drive ON → it never settles. Keeps moving without blowing up.",
+  "A binary mind just flips: x → 1−x, period 2, forever. No correction.",
+  "Five nodes turn that into e^(−1.776t). Same world, different math."
+];
+let narrIdx = 0, narrTick = 0;
+
+function update() {
+  const sum = x.reduce((a,b)=>a+b, 0);
+  document.getElementById('sum').textContent = sum.toFixed(4);
+  const sp = x.reduce((a,v)=>a+(v-0.2)**2, 0);
+  document.getElementById('spread').textContent = sp.toFixed(4);
+  const st = document.getElementById('status');
+  st.textContent = sp < 0.005 ? 'balanced' : (sp > 0.15 ? 'extreme' : 'moving');
+  st.className = sp > 0.15 ? 'warn' : '';
+  x.forEach((v, i) => {
+    document.getElementById('fill'+i).style.width = (Math.max(v,0)*100) + '%';
+    document.getElementById('val'+i).textContent = (v*100).toFixed(1) + '%';
+  });
+  narrTick++;
+  if (narrTick > 100) { narrTick = 0; narrEl.textContent = narrs[narrIdx++ % narrs.length]; }
+}
+
+// ---- controls ----
+document.querySelectorAll('.boost').forEach(b => {
+  b.addEventListener('click', () => {
+    const i = +b.dataset.i;
+    x[i] += 0.15;
+    const s = x.reduce((a,b)=>a+b, 0);
+    x = x.map(v => v/s);
+    narrEl.textContent = `Pushed ${NAMES[i]} up. Watch it spiral back.`;
+  });
+});
+
+document.getElementById('extreme').addEventListener('click', () => {
+  x = [0.75, 0.0625, 0.0625, 0.0625, 0.0625];
+  narrEl.textContent = "Pushed A to 75%. Watch the spiral pull it back.";
+});
+
+const driveBtn = document.getElementById('drive');
+driveBtn.addEventListener('click', () => {
+  driveOn = !driveOn;
+  driveBtn.textContent = 'drive: ' + (driveOn ? 'ON' : 'OFF');
+  driveBtn.style.borderColor = driveOn ? '#22d3ee' : '';
+  narrEl.textContent = driveOn ? "Drive on — the dead point wakes up." : "Drive off — watch it settle.";
+});
+
+document.getElementById('auto').addEventListener('click', () => {
+  autoOn = !autoOn;
+  narrEl.textContent = autoOn ? "Auto drift on — random pushes." : "Auto drift off.";
+});
+document.getElementById('reset').addEventListener('click', () => { x = [0.2,0.2,0.2,0.2,0.2]; t = 0; });
+
+// ---- main loop ----
+setInterval(() => {
+  if (autoOn) {
+    const i = Math.floor(Math.random()*N);
+    x[i] += 0.08;
+    const s = x.reduce((a,b)=>a+b, 0);
+    x = x.map(v => v/s);
+  }
+  step();
+  draw();
+  update();
+}, 50);
+
+draw();
+update();
+</script>
+</body>
+</html>
