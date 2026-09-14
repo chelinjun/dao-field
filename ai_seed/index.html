@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>TianDao Seed v0.1</title>
+    <style>
+        body { background: #111; color: #eee; font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 0 10px; }
+        #chat { border: 1px solid #333; padding: 10px; height: 350px; overflow-y: scroll; margin-bottom: 10px; border-radius: 4px; }
+        input { width: 80%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; border-radius: 4px; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .msg-user { color: #64B5F6; margin: 8px 0; }
+        .msg-system { color: #FFB74D; margin: 8px 0; font-size: 0.9em; }
+        .msg-warn { color: #f44; margin: 8px 0; font-size: 0.85em; }
+        #status { color: #888; font-size: 0.8em; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <h3>🌱 TianDao Seed v0.1</h3>
+    <p style="color:#888;font-size:0.85em;margin-bottom:15px;">5-node conservation kernel. The more you use it, the more it becomes you. seed_state.json stays on YOUR machine. Works offline.</p>
+    <div id="status"></div>
+    <div id="chat"></div>
+    <input id="msg" type="text" placeholder='Say something... (e.g., "remind me of mom birthday")' autocomplete="off">
+    <button onclick="send()">Send</button>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('msg');
+        const status = document.getElementById('status');
+
+        // 检测当前访问协议，决定 API 基地址
+        // 通过 http(s):// 访问 → 用当前 origin
+        // 直接打开文件 file:// → 回退到 localhost:8000
+        let API_BASE;
+        if (location.protocol === 'file:') {
+            API_BASE = 'http://127.0.0.1:8000';
+            status.innerHTML = '⚠️ Running from file:// — make sure <b>start.bat</b> is running first. / 请先双击 start.bat 启动服务器';
+            status.className = 'msg-warn';
+        } else {
+            API_BASE = location.origin;
+            status.innerHTML = '✅ Connected to ' + API_BASE;
+            status.style.color = '#4CAF50';
+        }
+
+        function addMsg(text, className) {
+            const div = document.createElement('div');
+            div.className = className;
+            div.innerHTML = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function send() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMsg('\uD83D\uDC64 ' + text, 'msg-user');
+            input.value = '';
+
+            try {
+                const res = await fetch(API_BASE + '/', {
+                    method: 'POST',
+                    body: text,
+                    headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                addMsg('\uD83E\uDE84 [Seed] Intent: ' + data.intent + ' \u2192 Awakened [' + data.awaken + ']', 'msg-system');
+                addMsg('\u2696\uFE0F [Alloc] x=' + JSON.stringify(data.alloc) + ' \u03A3=1.00', 'msg-system');
+                addMsg('\uD83C\uDF31 [Growth] \u03B3=' + JSON.stringify(data.gamma), 'msg-system');
+            } catch (e) {
+                addMsg('\u274C (Server not responding at ' + API_BASE + '. Run start.bat first! / 请先启动 start.bat)', 'msg-warn');
+                console.error('[TianDao] fetch error:', e);
+            }
+        }
+
+        input.addEventListener('keydown', function(e) { if (e.key === 'Enter') send(); });
+    </script>
+</body>
+</html>
